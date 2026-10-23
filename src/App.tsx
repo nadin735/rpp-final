@@ -1,14 +1,30 @@
 import { useEffect, useState } from 'react'
 import type { Plan, Assignment } from './types'
 import { dict, isRtl, Lang } from './i18n'
-import { getSession, getAccountDisplayName, logout } from './utils/account'
+import { WORKSPACE, purgeLegacyAccounts, deleteAllLocalData } from './utils/account'
 import { loadPlans, upsertPlan, deletePlan, newPlan } from './utils/plans'
-import LoginScreen from './components/LoginScreen'
+import { demoPlans } from './utils/demo'
+import LegalModal, { type LegalPage } from './components/LegalModal'
+import ConfirmDialog from './components/ConfirmDialog'
 import PortfolioDashboard from './components/PortfolioDashboard'
 import AddPlanModal from './components/AddPlanModal'
 import PlanResultScreen from './components/PlanResultScreen'
 
 const THEME_KEY = 'rcp-theme-v1'
+const PORTFOLIO_URL = 'https://nadin.dev'
+const accountKey = WORKSPACE
+
+// Runs once per page load, before the first render reads storage.
+purgeLegacyAccounts()
+
+function readTheme(): 'night' | 'day' {
+  try {
+    return (localStorage.getItem(THEME_KEY) as 'night' | 'day') ?? 'night'
+  } catch {
+    return 'night'
+  }
+}
+
 const LANG_LABEL: Record<Lang, string> = { de: 'DE', en: 'EN', ar: 'AR' }
 
 export default function App() {
@@ -16,12 +32,10 @@ export default function App() {
   const t = dict[lang]
   const rtl = isRtl[lang]
 
-  const [theme, setTheme] = useState<'night' | 'day'>(() => (localStorage.getItem(THEME_KEY) as 'night' | 'day') ?? 'night')
-  const [accountKey, setAccountKey] = useState<string | null>(() => getSession())
-  const [plans, setPlans] = useState<Plan[]>(() => {
-    const session = getSession()
-    return session ? loadPlans(session) : []
-  })
+  const [theme, setTheme] = useState<'night' | 'day'>(readTheme)
+  const [plans, setPlans] = useState<Plan[]>(() => loadPlans(accountKey))
+  const [legalPage, setLegalPage] = useState<LegalPage | null>(null)
+  const [confirmWipe, setConfirmWipe] = useState(false)
   const [activePlanId, setActivePlanId] = useState<string | null>(null)
   const [showAddModal, setShowAddModal] = useState(false)
 
@@ -32,23 +46,13 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
-    localStorage.setItem(THEME_KEY, theme)
+    try {
+      localStorage.setItem(THEME_KEY, theme)
+    } catch {
+      /* private mode */
+    }
   }, [theme])
 
-  if (!accountKey) {
-    return (
-      <LoginScreen
-        t={t}
-        onLogin={(key) => {
-          setAccountKey(key)
-          setPlans(loadPlans(key))
-          setActivePlanId(null)
-        }}
-      />
-    )
-  }
-
-  const displayName = getAccountDisplayName(accountKey)
   const activePlan = activePlanId ? plans.find((p) => p.id === activePlanId) ?? null : null
 
   const handleAddComplete = (assignments: Assignment[], targetPlanId: string | null, pdfName: string | null) => {
@@ -84,20 +88,27 @@ export default function App() {
 
   const handleDeletePlan = (id: string) => setPlans(deletePlan(accountKey, id))
 
+  const handleLoadDemo = () => {
+    let next = plans
+    for (const p of demoPlans()) next = upsertPlan(accountKey, p)
+    setPlans(next)
+  }
+
+  const handleWipe = () => {
+    deleteAllLocalData()
+    setPlans([])
+    setActivePlanId(null)
+    setConfirmWipe(false)
+  }
+
   return (
     <div className="min-h-screen scanlines">
       <header className="max-w-6xl mx-auto px-6 pt-10 pb-6 flex items-start justify-between gap-4 flex-wrap">
-        <div className="flex items-center gap-2">
-          <span className="inline-block w-2 h-2 rounded-full border border-gold-500 bg-field px-2 py-1 text-[11px] font-mono text-ink2">{displayName}</span>
-          <span
-            className="text-[11px] font-mono text-ink3 underline cursor-pointer hover:text-gold-400"
-            onClick={() => {
-              logout()
-              setAccountKey(null)
-            }}
-          >
-            {t.logout}
-          </span>
+        <div>
+          <h1 className="font-display text-2xl font-semibold text-ink">Resource &amp; Personnel Planner</h1>
+          <a href={PORTFOLIO_URL} className="text-sm text-ink2 underline hover:text-gold-400">
+            ← {t.allTools}
+          </a>
         </div>
 
         <div className="flex items-center gap-4 flex-wrap">
@@ -127,9 +138,32 @@ export default function App() {
         {activePlan ? (
           <PlanResultScreen plan={activePlan} allPlans={plans} lang={lang} onSave={handleSaveResult} onBack={() => setActivePlanId(null)} t={t} />
         ) : (
-          <PortfolioDashboard plans={plans} onOpen={(id) => setActivePlanId(id)} onAdd={() => setShowAddModal(true)} onDelete={handleDeletePlan} t={t} />
+          <PortfolioDashboard plans={plans} onOpen={(id) => setActivePlanId(id)} onAdd={() => setShowAddModal(true)} onDemo={handleLoadDemo} onDelete={handleDeletePlan} t={t} />
         )}
       </main>
+
+      <footer className="max-w-6xl mx-auto px-6 pb-10 text-sm text-ink2">
+        <p className="mb-3">{t.localNote}</p>
+        <nav className="flex flex-wrap gap-x-5 gap-y-2">
+          <button className="underline hover:text-gold-400" onClick={() => setLegalPage('imprint')}>{t.imprint}</button>
+          <button className="underline hover:text-gold-400" onClick={() => setLegalPage('privacy')}>{t.privacy}</button>
+          <button className="underline hover:text-gold-400" onClick={() => setConfirmWipe(true)}>{t.deleteAllData}</button>
+          <a className="underline hover:text-gold-400" href={PORTFOLIO_URL}>{t.allTools}</a>
+        </nav>
+      </footer>
+
+      {legalPage && (
+        <LegalModal
+          page={legalPage}
+          appName="Resource & Personnel Planner"
+          localProcessing="Hochgeladene PDFs werden direkt in Ihrem Browser ausgelesen und nicht hochgeladen."
+          onClose={() => setLegalPage(null)}
+          t={t}
+        />
+      )}
+      {confirmWipe && (
+        <ConfirmDialog message={t.confirmDeleteAll} danger onConfirm={handleWipe} onCancel={() => setConfirmWipe(false)} t={t} />
+      )}
 
       {showAddModal && <AddPlanModal plans={plans} onClose={() => setShowAddModal(false)} onComplete={handleAddComplete} t={t} />}
     </div>

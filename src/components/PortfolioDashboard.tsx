@@ -12,6 +12,7 @@ interface Props {
   plans: Plan[]
   onOpen: (id: string) => void
   onAdd: () => void
+  onDemo: () => void
   onDelete: (id: string) => void
   t: Dict
 }
@@ -55,7 +56,7 @@ export function StatusBadge({ result, t }: { result: ReturnType<typeof computeAl
   )
 }
 
-export default function PortfolioDashboard({ plans, onOpen, onAdd, onDelete, t }: Props) {
+export default function PortfolioDashboard({ plans, onOpen, onAdd, onDemo, onDelete, t }: Props) {
   const [query, setQuery] = useState('')
   const [sortKey, setSortKey] = useState<SortKey>('updated')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
@@ -131,6 +132,15 @@ export default function PortfolioDashboard({ plans, onOpen, onAdd, onDelete, t }
           <button onClick={onAdd} className="px-5 py-2.5 text-sm font-mono bg-gold-500 text-inkOnGold rounded hover:bg-gold-400 font-semibold">
             {t.addPlan}
           </button>
+          <div className="mt-4">
+            <button
+              onClick={onDemo}
+              className="px-5 py-2.5 text-sm border border-gold-500 text-gold-400 rounded hover:bg-gold-500 hover:text-inkOnGold font-semibold"
+            >
+              {t.demoButton}
+            </button>
+            <p className="text-xs text-ink3 mt-2">{t.demoHint}</p>
+          </div>
         </div>
       ) : (
         <div>

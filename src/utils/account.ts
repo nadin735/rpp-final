@@ -1,60 +1,38 @@
-// Demo-only local "account" system. There is no server, no hashing, no
-// real security here, this exists so the app can demonstrate a login and
-// portfolio pattern end to end. Passwords are stored in plain text in the
-// browser's localStorage under a namespaced key. Never reuse a real
-// password here. This is documented prominently in the login screen and
-// the README, not just in this comment.
+// No login: all plans live in one local workspace in this browser.
+//
+// Earlier versions had a demo "login" that stored names and passwords in
+// plain text in localStorage. That is gone. On start-up we migrate the last
+// signed-in user's plans into the local workspace and then delete every
+// stored name/password, so no credentials remain in the browser.
 
-const ACCOUNTS_KEY = 'rcp-accounts-v1'
-const SESSION_KEY = 'rcp-session-v1'
+export const WORKSPACE = 'local'
 
-interface StoredAccount {
-  name: string
-  password: string
-}
+const LEGACY_ACCOUNTS_KEY = 'rcp-accounts-v1'
+const LEGACY_SESSION_KEY = 'rcp-session-v1'
 
-function readAccounts(): Record<string, StoredAccount> {
+const plansKey = (key: string) => `rcp-plans-${key}-v1`
+
+export function purgeLegacyAccounts(): void {
   try {
-    const raw = localStorage.getItem(ACCOUNTS_KEY)
-    return raw ? JSON.parse(raw) : {}
+    const session = localStorage.getItem(LEGACY_SESSION_KEY)
+    if (session && !localStorage.getItem(plansKey(WORKSPACE))) {
+      const legacy = localStorage.getItem(plansKey(session))
+      if (legacy) localStorage.setItem(plansKey(WORKSPACE), legacy)
+    }
+    localStorage.removeItem(LEGACY_ACCOUNTS_KEY)
+    localStorage.removeItem(LEGACY_SESSION_KEY)
   } catch {
-    return {}
+    /* storage unavailable (private mode) — nothing to clean up */
   }
 }
 
-function writeAccounts(accounts: Record<string, StoredAccount>) {
-  localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts))
-}
-
-export type LoginResult = { ok: true } | { ok: false; reason: 'wrong-password' }
-
-// First login with a given name creates the account. Any later login with
-// the same name must match the password that was set the first time.
-export function loginOrRegister(name: string, password: string): LoginResult {
-  const key = name.trim().toLowerCase()
-  const accounts = readAccounts()
-  const existing = accounts[key]
-
-  if (existing) {
-    if (existing.password !== password) return { ok: false, reason: 'wrong-password' }
-  } else {
-    accounts[key] = { name: name.trim(), password }
-    writeAccounts(accounts)
+/** Deletes every key this app wrote in this browser: plans, theme, legacy data. */
+export function deleteAllLocalData(): void {
+  try {
+    Object.keys(localStorage)
+      .filter((k) => k.startsWith('rcp-'))
+      .forEach((k) => localStorage.removeItem(k))
+  } catch {
+    /* ignore */
   }
-
-  localStorage.setItem(SESSION_KEY, key)
-  return { ok: true }
-}
-
-export function getSession(): string | null {
-  return localStorage.getItem(SESSION_KEY)
-}
-
-export function getAccountDisplayName(key: string): string {
-  const accounts = readAccounts()
-  return accounts[key]?.name ?? key
-}
-
-export function logout() {
-  localStorage.removeItem(SESSION_KEY)
 }
