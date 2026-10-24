@@ -6,7 +6,7 @@ function plansKey(accountKey: string) {
 
 export function loadPlans(accountKey: string): Plan[] {
   try {
-    const raw = localStorage.getItem(plansKey(accountKey))
+    const raw = sessionStorage.getItem(plansKey(accountKey))
     return raw ? JSON.parse(raw) : []
   } catch {
     return []
@@ -14,7 +14,7 @@ export function loadPlans(accountKey: string): Plan[] {
 }
 
 function savePlans(accountKey: string, plans: Plan[]) {
-  localStorage.setItem(plansKey(accountKey), JSON.stringify(plans))
+  sessionStorage.setItem(plansKey(accountKey), JSON.stringify(plans))
 }
 
 export function upsertPlan(accountKey: string, plan: Plan): Plan[] {

@@ -80,8 +80,9 @@ export default function LegalModal({ page, appName, localProcessing, onClose, t 
             </p>
             <h3 className="font-semibold pt-2">Ihre Eingaben</h3>
             <p>
-              Es gibt kein Login und keine Datenbank. Projekte und Einstellungen werden ausschließlich im localStorage Ihres
-              Browsers gespeichert und nie an mich oder Dritte übertragen. {localProcessing} Mit „{t.deleteAllData}“ unten
+              Es gibt kein Login und keine Datenbank. Ihre Eingaben werden nur im sessionStorage dieses Browser-Tabs gespeichert,
+              nie an mich oder Dritte übertragen und beim Schließen des Tabs automatisch gelöscht. Jede Person, die den
+              Link öffnet, startet daher mit einer leeren Seite. {localProcessing} Mit „{t.deleteAllData}“ unten
               auf der Seite löschen Sie alles sofort; alternativ über die Browser-Einstellungen.
             </p>
             <h3 className="font-semibold pt-2">Keine Cookies, kein Tracking</h3>
