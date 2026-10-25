@@ -8,9 +8,6 @@ export type LegalPage = 'imprint' | 'privacy'
 
 const OWNER = {
   name: 'Nadin Okil',
-  // TODO: ladungsfähige Anschrift eintragen (Pflicht nach § 18 MStV)
-  street: '[Straße und Hausnummer]',
-  city: '[PLZ Ort]',
   email: 'nadinokil.contact@gmail.com',
 }
 
@@ -50,10 +47,6 @@ export default function LegalModal({ page, appName, localProcessing, onClose, t 
             <p>Angaben gemäß § 18 Abs. 1 MStV</p>
             <p>
               {OWNER.name}
-              <br />
-              {OWNER.street}
-              <br />
-              {OWNER.city}
             </p>
             <p>
               E-Mail: <a className="underline" href={`mailto:${OWNER.email}`}>{OWNER.email}</a>
@@ -68,7 +61,7 @@ export default function LegalModal({ page, appName, localProcessing, onClose, t 
             <h2 id="legal-title" className="font-display text-xl font-semibold">Datenschutzerklärung</h2>
             <h3 className="font-semibold pt-2">Verantwortlich</h3>
             <p>
-              {OWNER.name}, {OWNER.street}, {OWNER.city}, {OWNER.email}
+              {OWNER.name}, {OWNER.email}
             </p>
             <h3 className="font-semibold pt-2">Hosting</h3>
             <p>
